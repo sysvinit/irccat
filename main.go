@@ -35,10 +35,16 @@ func main() {
 
 	loggo.ConfigureLoggers("<root>=INFO")
 	log.Infof("IRCCat %s (%s) starting...", branch, revision)
-	viper.SetConfigName("irccat")
-	viper.AddConfigPath("/run/secrets")
-	viper.AddConfigPath("/etc")
-	viper.AddConfigPath(".")
+
+	if len(flag.Args()) > 0 {
+		viper.SetConfigFile(flag.Args()[0])
+	} else {
+		viper.SetConfigName("irccat")
+		viper.AddConfigPath("/run/secrets")
+		viper.AddConfigPath("/etc")
+		viper.AddConfigPath(".")
+	}
+
 	var err error
 
 	err = viper.ReadInConfig()
