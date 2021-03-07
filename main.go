@@ -8,6 +8,7 @@ import (
 	"github.com/irccloud/irccat/httplistener"
 	"github.com/irccloud/irccat/tcplistener"
 	"github.com/irccloud/irccat/unixlistener"
+	"github.com/irccloud/irccat/unixgramlistener"
 	"github.com/juju/loggo"
 	"github.com/spf13/viper"
 	"github.com/thoj/go-ircevent"
@@ -28,6 +29,7 @@ type IRCCat struct {
 	irc          *irc.Connection
 	tcp          *tcplistener.TCPListener
 	unix         *unixlistener.UnixListener
+	unixgram     *unixgramlistener.UnixGramListener
 	signals      chan os.Signal
 }
 
@@ -82,6 +84,14 @@ func main() {
 		}
 	}
 
+	if viper.IsSet("unixgram") {
+		irccat.unixgram, err = unixgramlistener.New()
+		if err != nil {
+			log.Criticalf("Error starting Unix datagram listener: %s", err)
+			return
+		}
+	}
+
 	err = irccat.connectIRC(*debug)
 
 	if err != nil {
@@ -98,6 +108,9 @@ func main() {
 	}
 	if viper.IsSet("unix") {
 		irccat.unix.Run(irccat.irc)
+	}
+	if viper.IsSet("unixgram") {
+		irccat.unixgram.Run(irccat.irc)
 	}
 
 	irccat.irc.Loop()
