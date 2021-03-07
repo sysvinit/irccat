@@ -7,6 +7,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/irccloud/irccat/httplistener"
 	"github.com/irccloud/irccat/tcplistener"
+	"github.com/irccloud/irccat/unixlistener"
 	"github.com/juju/loggo"
 	"github.com/spf13/viper"
 	"github.com/thoj/go-ircevent"
@@ -26,6 +27,7 @@ type IRCCat struct {
 	auth_users   map[string]bool
 	irc          *irc.Connection
 	tcp          *tcplistener.TCPListener
+	unix         *unixlistener.UnixListener
 	signals      chan os.Signal
 }
 
@@ -64,10 +66,20 @@ func main() {
 	signal.Notify(irccat.signals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	go irccat.signalHandler()
 
-	irccat.tcp, err = tcplistener.New()
-	if err != nil {
-		log.Criticalf("Error starting TCP listener: %s", err)
-		return
+	if viper.IsSet("tcp") {
+		irccat.tcp, err = tcplistener.New()
+		if err != nil {
+			log.Criticalf("Error starting TCP listener: %s", err)
+			return
+		}
+	}
+
+	if viper.IsSet("unix") {
+		irccat.unix, err = unixlistener.New()
+		if err != nil {
+			log.Criticalf("Error starting Unix stream listener: %s", err)
+			return
+		}
 	}
 
 	err = irccat.connectIRC(*debug)
@@ -81,7 +93,13 @@ func main() {
 		httplistener.New(irccat.irc)
 	}
 
-	irccat.tcp.Run(irccat.irc)
+	if viper.IsSet("tcp") {
+		irccat.tcp.Run(irccat.irc)
+	}
+	if viper.IsSet("unix") {
+		irccat.unix.Run(irccat.irc)
+	}
+
 	irccat.irc.Loop()
 }
 
