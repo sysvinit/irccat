@@ -21,7 +21,7 @@ func Send(irc *irc.Connection, msg string, log loggo.Logger, origin string) {
 		parts := strings.SplitN(msg, " ", 2)
 		if parts[0] == "#*" {
 			for _, channel := range channels {
-				irc.Privmsg(channel, replaceFormatting(parts[1]))
+				irc.Privmsg(channel, trim(replaceFormatting(parts[1])))
 			}
 		} else {
 			targets := strings.Split(parts[0], ",")
@@ -29,18 +29,31 @@ func Send(irc *irc.Connection, msg string, log loggo.Logger, origin string) {
 				if target[0] == '@' {
 					target = target[1:]
 				}
-				irc.Privmsg(target, replaceFormatting(parts[1]))
+				irc.Privmsg(target, trim(replaceFormatting(parts[1])))
 			}
 		}
 		log.Infof("from[%s] send[%s] %s", origin, parts[0], parts[1])
 	} else if len(msg) > 7 && msg[0:6] == "%TOPIC" {
 		parts := strings.SplitN(msg, " ", 3)
-		irc.SendRawf("TOPIC %s :%s", parts[1], replaceFormatting(parts[2]))
+		irc.SendRawf("TOPIC %s :%s", parts[1], trim(replaceFormatting(parts[2])))
 		log.Infof("from[%s] topic[%s] %s", origin, parts[1], parts[2])
 	} else {
 		if len(channels) > 0 {
-			irc.Privmsg(channels[0], replaceFormatting(msg))
+			irc.Privmsg(channels[0], trim(replaceFormatting(msg)))
 			log.Infof("from[%s] send_default[%s] %s", origin, channels[0], msg)
 		}
 	}
+}
+
+func trim(msg string) string {
+    b := []byte(msg)
+    // worst case maximum size for PRIVMSG, minus three for ellipsis
+    if len(b) > 357 {
+        b = b[:357]
+        r := string(b)
+        r += "..."
+        return r
+    } else {
+        return msg
+    }
 }
